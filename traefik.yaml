@@ -1,0 +1,41 @@
+entryPoints:
+  web:
+   address: ":80"
+  websecure:
+    address: ":443"
+providers:
+  docker: {}
+http:
+  routers:
+    api:
+      rule: "Path(`/api`)"
+      service: api
+      entryPoints:
+        - "web"
+    auth:
+      rule: "Path(`/auth`)"
+      service: auth
+      entryPoints:
+        - "web"
+  services:
+    api:
+      loadBalancer:
+        healthCheck:
+          path: /health
+          interval: "10s"
+          timeout: "3s"
+        servers:
+          - url: "http://localhost:3001/api"
+      labels:
+        - "traefik.http.middlewares.test-auth.forwardauth.address=http://localhost:3001/auth/authorize"
+        - "traefik.http.middlewares.latency-check.circuitbreaker.expression=LatencyAtQuantileMS(50.0) > 100"
+    auth:
+      loadBalancer:
+        healthCheck:
+          path: /health
+          interval: "10s"
+          timeout: "3s"
+        servers:
+          - url: "http://localhost:3002/auth"
+      labels:
+        - "traefik.http.middlewares.latency-check.circuitbreaker.expression=LatencyAtQuantileMS(50.0) > 100"
