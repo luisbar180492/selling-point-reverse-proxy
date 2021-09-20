@@ -4,7 +4,27 @@ services:
   reverse-proxy:
     image: traefik:v2.5
     ports:
-      - "80:80"
-      - "8080:8080"
+      - 80:80
+      - 8080:8080
     volumes:
-      - $PWD/traefik.yaml:/etc/traefik/traefik.yml
+      # Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+    command:
+      # Enables the web UI
+      - --api.insecure=true
+      # Tells Traefik to listen to docker
+      - --providers.docker
+  api:
+    build: 
+      context: ./selling-point-api
+    labels:
+      - traefik.http.routers.api.rule=PathPrefix(`/api`)
+    volumes:
+      - ./selling-point-api/src:/app/src
+  auth:
+    build: 
+      context: ./selling-point-auth
+    labels:
+      - traefik.http.routers.auth.rule=PathPrefix(`/auth`)
+    volumes:
+      - ./selling-point-auth/src:/app/src
