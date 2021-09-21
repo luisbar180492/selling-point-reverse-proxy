@@ -3,6 +3,7 @@ version: '3'
 services:
   reverse-proxy:
     image: traefik:v2.5
+    container_name: selling-point-reverse-proxy
     ports:
       - 80:80
       - 8080:8080
@@ -19,6 +20,8 @@ services:
     networks:
       - selling-point
   api:
+    image: selling-point-api
+    container_name: selling-point-api
     build: 
       context: ./selling-point-api
     labels:
@@ -31,6 +34,8 @@ services:
     networks:
       - selling-point
   auth:
+    image: selling-point-auth
+    container_name: selling-point-auth
     build: 
       context: ./selling-point-auth
     labels:
