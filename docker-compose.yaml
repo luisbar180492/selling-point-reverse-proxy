@@ -39,6 +39,10 @@ services:
       - traefik.enable=true
       # Matcher for creating a route
       - traefik.scope=selling-point
+      # Creates a service called selling-point-api
+      - traefik.http.services.selling-point-api.loadbalancer.server.port=3000
+      # Attach the container to a service
+      - traefik.http.routers.api.service=selling-point-api
     volumes:
       - ./selling-point-api/src:/app/src
     networks:
@@ -59,6 +63,10 @@ services:
       - traefik.enable=true
       # Matcher for creating a route
       - traefik.scope=selling-point
+      # Creates a service called selling-point-auth
+      - traefik.http.services.selling-point-auth.loadbalancer.server.port=3000
+      # Attach the container to a service
+      - traefik.http.routers.auth.service=selling-point-auth
     volumes:
       - ./selling-point-auth/src:/app/src
     networks:
