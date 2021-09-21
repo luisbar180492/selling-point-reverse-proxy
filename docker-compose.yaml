@@ -27,7 +27,9 @@ services:
     labels:
       # Tells Traefik where to redirect the request if the url has the specified prefix
       - traefik.http.routers.api.rule=PathPrefix(`/api`)
-      - traefik.http.routers.api.middlewares=auth-forward-auth
+      # Attaches a middleware for forwarding the authentication
+      - traefik.http.routers.api.middlewares=forward-auth
+      # Attaches entrypoints
       - traefik.http.routers.api.entrypoints=web
     volumes:
       - ./selling-point-api/src:/app/src
@@ -41,7 +43,9 @@ services:
     labels:
       # Tells Traefik where to redirect the request if the url has the specified prefix
       - traefik.http.routers.auth.rule=PathPrefix(`/auth`)
-      - traefik.http.middlewares.auth-forward-auth.forwardauth.address=http://auth:3000/auth/authorize
+      # Creates a forward auth middleware
+      - traefik.http.middlewares.forward-auth.forwardauth.address=http://auth:3000/auth/authorize
+      # Attaches entrypoints
       - traefik.http.routers.auth.entrypoints=web
     volumes:
       - ./selling-point-auth/src:/app/src
