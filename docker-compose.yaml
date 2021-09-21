@@ -18,13 +18,17 @@ services:
     build: 
       context: ./selling-point-api
     labels:
+      # Tells Traefik where to redirect the request if the url has the specified prefix
       - traefik.http.routers.api.rule=PathPrefix(`/api`)
+      - traefik.http.routers.api.middlewares=auth-forward-auth
     volumes:
       - ./selling-point-api/src:/app/src
   auth:
     build: 
       context: ./selling-point-auth
     labels:
+      # Tells Traefik where to redirect the request if the url has the specified prefix
       - traefik.http.routers.auth.rule=PathPrefix(`/auth`)
+      - traefik.http.middlewares.auth-forward-auth.forwardauth.address=http://auth:3000/auth/authorize
     volumes:
       - ./selling-point-auth/src:/app/src
