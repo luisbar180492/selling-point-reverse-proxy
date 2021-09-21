@@ -17,6 +17,10 @@ services:
       - --providers.docker
       # Creates a new entrypoint called web
       - --entrypoints.web.address=:80
+      # Disable container exposition
+      - --providers.docker.exposedByDefault=false
+      # Traefik matches against the container's labels to determine whether to create any route for that container
+      - --providers.docker.constraints=Label(`traefik.scope`,`selling-point`)
     networks:
       - selling-point
   api:
@@ -31,6 +35,10 @@ services:
       - traefik.http.routers.api.middlewares=forward-auth
       # Attaches entrypoints
       - traefik.http.routers.api.entrypoints=web
+      # Exposes container
+      - traefik.enable=true
+      # Matcher for creating a route
+      - traefik.scope=selling-point
     volumes:
       - ./selling-point-api/src:/app/src
     networks:
@@ -47,6 +55,10 @@ services:
       - traefik.http.middlewares.forward-auth.forwardauth.address=http://auth:3000/auth/authorize
       # Attaches entrypoints
       - traefik.http.routers.auth.entrypoints=web
+      # Exposes container
+      - traefik.enable=true
+      # Matcher for creating a route
+      - traefik.scope=selling-point
     volumes:
       - ./selling-point-auth/src:/app/src
     networks:
