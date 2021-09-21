@@ -43,6 +43,10 @@ services:
       - traefik.http.services.selling-point-api.loadbalancer.server.port=3000
       # Attach the container to a service
       - traefik.http.routers.api.service=selling-point-api
+      # Creates circuit breaker middleware
+      - traefik.http.middlewares.latency-check.circuitbreaker.expression=LatencyAtQuantileMS(50.0) > 100
+      # Attaches a circuit breaker middleware
+      - traefik.http.routers.api.middlewares=latency-check
     volumes:
       - ./selling-point-api/src:/app/src
     networks:
@@ -67,6 +71,8 @@ services:
       - traefik.http.services.selling-point-auth.loadbalancer.server.port=3000
       # Attach the container to a service
       - traefik.http.routers.auth.service=selling-point-auth
+      # Attaches a circuit breaker middleware
+      - traefik.http.routers.auth.middlewares=latency-check
     volumes:
       - ./selling-point-auth/src:/app/src
     networks:
