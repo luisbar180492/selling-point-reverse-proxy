@@ -14,6 +14,8 @@ services:
       - --api.insecure=true
       # Tells Traefik to listen to docker
       - --providers.docker
+    networks:
+      - selling-point
   api:
     build: 
       context: ./selling-point-api
@@ -23,6 +25,8 @@ services:
       - traefik.http.routers.api.middlewares=auth-forward-auth
     volumes:
       - ./selling-point-api/src:/app/src
+    networks:
+      - selling-point
   auth:
     build: 
       context: ./selling-point-auth
@@ -32,3 +36,10 @@ services:
       - traefik.http.middlewares.auth-forward-auth.forwardauth.address=http://auth:3000/auth/authorize
     volumes:
       - ./selling-point-auth/src:/app/src
+    networks:
+      - selling-point
+
+networks:
+  selling-point:
+    name: selling-point
+    driver: bridge
