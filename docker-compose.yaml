@@ -32,7 +32,7 @@ services:
       # Tells Traefik where to redirect the request if the url has the specified prefix
       - traefik.http.routers.api.rule=PathPrefix(`/api`)
       # Attaches a middleware for forwarding the authentication
-      - traefik.http.routers.api.middlewares=forward-auth
+      - traefik.http.routers.api.middlewares=forward-auth,latency-check
       # Attaches entrypoints
       - traefik.http.routers.api.entrypoints=web
       # Exposes container
@@ -45,8 +45,6 @@ services:
       - traefik.http.routers.api.service=selling-point-api
       # Creates circuit breaker middleware
       - traefik.http.middlewares.latency-check.circuitbreaker.expression=LatencyAtQuantileMS(50.0) > 100
-      # Attaches a circuit breaker middleware
-      - traefik.http.routers.api.middlewares=latency-check
     volumes:
       - ./selling-point-api/src:/app/src
     networks:
@@ -73,10 +71,28 @@ services:
       - traefik.http.routers.auth.service=selling-point-auth
       # Attaches a circuit breaker middleware
       - traefik.http.routers.auth.middlewares=latency-check
+    environment:
+      WAIT_HOSTS: mysql:3306
+      IGNORE_ENV_FILE: 'true'
+      DATABASE_URL: mysql://root:huachinango@mysql:3306/selling_point
+      PASSWORD_SALT: $$2b$$10$$g0OI8KtIE3j6OQqt1ZUDte
+      NODE_ENV: development
     volumes:
       - ./selling-point-auth/src:/app/src
     networks:
       - selling-point
+  mysql:
+    image: mysql:5
+    environment:
+      MYSQL_ROOT_PASSWORD: huachinango
+      MYSQL_DATABASE: selling_point
+    networks:
+      - selling-point
+    volumes:
+      - mysql-db:/var/lib/mysql
+
+volumes:
+  mysql-db:
 
 networks:
   selling-point:
