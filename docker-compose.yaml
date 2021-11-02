@@ -49,6 +49,10 @@ services:
       - ./selling-point-api/src:/app/src
     networks:
       - selling-point
+    environment:
+      WAIT_HOSTS: mysql:3306
+      DATABASE_URL: mysql://root:huachinango@mysql:3306/selling_point
+      NODE_ENV: development
   auth:
     image: selling-point-auth
     container_name: selling-point-auth
