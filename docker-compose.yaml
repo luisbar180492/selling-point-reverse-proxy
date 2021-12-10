@@ -21,6 +21,12 @@ services:
       - --providers.docker.exposedByDefault=false
       # Traefik matches against the container's labels to determine whether to create any route for that container
       - --providers.docker.constraints=Label(`traefik.scope`,`selling-point`)
+      # Enable tracing (using jaeger by default)
+      - --tracing=true
+      # Name of the tracing service on Jaeger
+      - --tracing.serviceName=reverse-proxy
+      # Host and port of the Jaeger agent
+      - --tracing.jaeger.localAgentHostPort=jaeger:6831
     networks:
       - selling-point
   api:
@@ -87,6 +93,7 @@ services:
       - selling-point
   mysql:
     image: mysql:5
+    container_name: selling-point-mysql
     environment:
       MYSQL_ROOT_PASSWORD: huachinango
       MYSQL_DATABASE: selling_point
@@ -94,7 +101,15 @@ services:
       - selling-point
     volumes:
       - mysql-db:/var/lib/mysql
-
+  jaeger:
+    image: jaegertracing/all-in-one:1.29
+    container_name: selling-point-tracing
+    environment:
+      COLLECTOR_ZIPKIN_HOST_PORT: :9411
+    ports:
+      - 16686:16686
+    networks:
+      - selling-point
 volumes:
   mysql-db:
 
