@@ -33,7 +33,7 @@ services:
       # Exposes container
       - traefik.enable=true
       # Creates circuit breaker middleware
-      - traefik.http.middlewares.latency-check.circuitbreaker.expression=LatencyAtQuantileMS(50.0) > 100
+      - traefik.http.middlewares.latency-check.circuitbreaker.expression=LatencyAtQuantileMS(50.0) > 10000
       # Creates a forward auth middleware
       - traefik.http.middlewares.forward-auth.forwardauth.address=http://auth:3000/auth/authorize
     networks:
