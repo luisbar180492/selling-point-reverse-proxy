@@ -27,6 +27,15 @@ services:
       - --tracing.serviceName=reverse-proxy
       # Host and port of the Jaeger agent
       - --tracing.jaeger.localAgentHostPort=jaeger:6831
+    labels:
+      # Matcher for creating a route
+      - traefik.scope=selling-point
+      # Exposes container
+      - traefik.enable=true
+      # Creates circuit breaker middleware
+      - traefik.http.middlewares.latency-check.circuitbreaker.expression=LatencyAtQuantileMS(50.0) > 100
+      # Creates a forward auth middleware
+      - traefik.http.middlewares.forward-auth.forwardauth.address=http://auth:3000/auth/authorize
     networks:
       - selling-point
   api:
@@ -49,8 +58,6 @@ services:
       - traefik.http.services.selling-point-api.loadbalancer.server.port=3000
       # Attach the container to a service
       - traefik.http.routers.api.service=selling-point-api
-      # Creates circuit breaker middleware
-      - traefik.http.middlewares.latency-check.circuitbreaker.expression=LatencyAtQuantileMS(50.0) > 100
     volumes:
       - ./selling-point-api/src:/app/src
     networks:
@@ -67,8 +74,8 @@ services:
     labels:
       # Tells Traefik where to redirect the request if the url has the specified prefix
       - traefik.http.routers.auth.rule=PathPrefix(`/auth`)
-      # Creates a forward auth middleware
-      - traefik.http.middlewares.forward-auth.forwardauth.address=http://auth:3000/auth/authorize
+        # Attaches a circuit breaker middleware
+      - traefik.http.routers.auth.middlewares=latency-check
       # Attaches entrypoints
       - traefik.http.routers.auth.entrypoints=web
       # Exposes container
@@ -79,8 +86,6 @@ services:
       - traefik.http.services.selling-point-auth.loadbalancer.server.port=3000
       # Attach the container to a service
       - traefik.http.routers.auth.service=selling-point-auth
-      # Attaches a circuit breaker middleware
-      - traefik.http.routers.auth.middlewares=latency-check
     environment:
       WAIT_HOSTS: mysql:3306
       IGNORE_ENV_FILE: 'true'
