@@ -4,3 +4,6 @@
 [submodule "selling-point-auth"]
 	path = selling-point-auth
 	url = https://gitlab.com/luisbar/selling-point-auth.git
+[submodule "selling-point-admin-dashboard"]
+	path = selling-point-admin-dashboard
+	url = https://gitlab.com/luisbar/selling-point-admin-dashboard.git
