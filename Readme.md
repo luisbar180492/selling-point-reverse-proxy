@@ -7,7 +7,9 @@ git clone --recursive git@personal-gitlab:luisbar/selling-point-reverse-proxy.gi
 
 2. Create keys for the JWT into `selling-point-auth/src` folder using the instructions in the `selling-point-auth/Readme.md` file
 
-3. Run using docker compose
+3. Create an empty `.env` file on `selling-point-admin-dashboard`
+
+4. Run using docker compose
 ```bash
 docker-compose up -d
 ```
