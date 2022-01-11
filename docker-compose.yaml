@@ -1,9 +1,27 @@
 version: '3'
 
 services:
+  admin-dashboard:
+    image: selling-point-admin-dashboard
+    container_name: selling-point-admin-dashboard
+    restart: always
+    ports:
+      - 3000:3000
+    build: 
+      context: ./selling-point-admin-dashboard
+    volumes:
+      - ./selling-point-admin-dashboard/src:/app/src
+      - ./selling-point-admin-dashboard/node_modules:/app/node_modules
+    networks:
+      - selling-point
+    environment:
+      IGNORE_ENV_FILE: "true"
+      BASE_URL: http://localhost
+      ENV: development
   reverse-proxy:
     image: traefik:v2.5
     container_name: selling-point-reverse-proxy
+    restart: always
     ports:
       - 80:80
       - 8080:8080
@@ -45,6 +63,7 @@ services:
   api:
     image: selling-point-api
     container_name: selling-point-api
+    restart: always
     build: 
       context: ./selling-point-api
     labels:
@@ -73,6 +92,7 @@ services:
   auth:
     image: selling-point-auth
     container_name: selling-point-auth
+    restart: always
     build: 
       context: ./selling-point-auth
     labels:
@@ -103,6 +123,7 @@ services:
   mysql:
     image: mysql:5
     container_name: selling-point-mysql
+    restart: always
     environment:
       MYSQL_ROOT_PASSWORD: huachinango
       MYSQL_DATABASE: selling_point
@@ -113,6 +134,7 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:1.29
     container_name: selling-point-tracing
+    restart: always
     environment:
       COLLECTOR_ZIPKIN_HOST_PORT: :9411
     ports:
