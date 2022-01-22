@@ -10,8 +10,7 @@ services:
     build: 
       context: ./selling-point-admin-dashboard
     volumes:
-      - ./selling-point-admin-dashboard/src:/app/src
-      - ./selling-point-admin-dashboard/node_modules:/app/node_modules
+      - ./selling-point-admin-dashboard:/app
     networks:
       - selling-point
     environment:
