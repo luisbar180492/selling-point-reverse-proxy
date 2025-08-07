@@ -10,7 +10,10 @@ services:
     build: 
       context: ./selling-point-admin-dashboard
     volumes:
-      - ./selling-point-admin-dashboard:/app
+      - ./selling-point-admin-dashboard/bundler:/app/bundler
+      - ./selling-point-admin-dashboard/public:/app/public
+      - ./selling-point-admin-dashboard/scripts:/app/scripts
+      - ./selling-point-admin-dashboard/src:/app/src
     networks:
       - selling-point
     environment:
