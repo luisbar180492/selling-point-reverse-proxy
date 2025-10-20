@@ -122,6 +122,14 @@ services:
       - ./selling-point-auth/src:/app/src
     networks:
       - selling-point
+  metabase:
+    image: metabase/metabase:v0.56.10.3
+    container_name: selling-point-metabase
+    restart: always
+    ports:
+      - 3001:3000
+    networks:
+      - selling-point
   mysql:
     image: mysql:5
     container_name: selling-point-mysql
