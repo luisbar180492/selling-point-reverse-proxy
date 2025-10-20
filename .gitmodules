@@ -2,11 +2,14 @@
 	path = selling-point-api
 	url = https://gitlab.com/luisbar/selling-point-api.git
 	branch = master
+	update = merge
 [submodule "selling-point-auth"]
 	path = selling-point-auth
 	url = https://gitlab.com/luisbar/selling-point-auth.git
 	branch = master
+	update = merge
 [submodule "selling-point-admin-dashboard"]
 	path = selling-point-admin-dashboard
 	url = https://gitlab.com/luisbar/selling-point-admin-dashboard.git
 	branch = master
+	update = merge
