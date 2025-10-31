@@ -128,10 +128,19 @@ services:
     restart: always
     ports:
       - 3001:3000
+    depends_on:
+      - mysql
+    environment:
+      MB_DB_TYPE: mysql
+      MB_DB_DBNAME: selling_point_analytics
+      MB_DB_PORT: 3306
+      MB_DB_USER: metabase
+      MB_DB_PASS: thepassword
+      MB_DB_HOST: mysql
     networks:
       - selling-point
   mysql:
-    image: mysql:5
+    image: mysql:8.3
     container_name: selling-point-mysql
     restart: always
     environment:
@@ -141,6 +150,7 @@ services:
       - selling-point
     volumes:
       - mysql-db:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
   jaeger:
     image: jaegertracing/all-in-one:1.29
     container_name: selling-point-tracing
