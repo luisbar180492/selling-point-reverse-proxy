@@ -14,6 +14,7 @@ services:
       - ./selling-point-admin-dashboard/public:/app/public
       - ./selling-point-admin-dashboard/scripts:/app/scripts
       - ./selling-point-admin-dashboard/src:/app/src
+      - ./selling-point-admin-dashboard/tailwind.config.js:/app/tailwind.config.js
     networks:
       - selling-point
     environment:
