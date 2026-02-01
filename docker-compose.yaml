@@ -144,6 +144,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: huachinango
       MYSQL_DATABASE: selling_point
+    ports:
+      - 3306:3306
     networks:
       - selling-point
     volumes:
@@ -157,6 +159,21 @@ services:
       COLLECTOR_ZIPKIN_HOST_PORT: :9411
     ports:
       - 16686:16686
+    networks:
+      - selling-point
+
+  ngrok:
+    image: ngrok/ngrok:3
+    container_name: selling-point-ngrok
+    restart: always
+    command:
+      - "http"
+      - "metabase:3000"
+      - "--url=${NGROK_URL}"
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - 4040:4040
     networks:
       - selling-point
 volumes:

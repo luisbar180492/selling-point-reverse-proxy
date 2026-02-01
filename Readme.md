@@ -9,7 +9,9 @@ git clone --recursive git@personal-gitlab:luisbar/selling-point-reverse-proxy.gi
 
 3. Create an empty `.env` file on `selling-point-admin-dashboard`
 
-4. Run using docker compose
+4. Create an `.env` file on `selling-point-reverse-proxy` using the `.env.example` file as a template
+
+5. Run using docker compose
 ```bash
 docker-compose up -d
 ```
