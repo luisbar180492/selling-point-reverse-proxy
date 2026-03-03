@@ -13,7 +13,8 @@ git clone --recursive git@personal-gitlab:luisbar/selling-point-reverse-proxy.gi
 
 5. Run using docker compose
 ```bash
-docker-compose up -d
+docker compose build
+docker-compose up
 ```
 
 ## How to update submodules?

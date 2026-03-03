@@ -22,7 +22,7 @@ services:
       BASE_URL: http://localhost
       ENV: development
   reverse-proxy:
-    image: traefik:v2.5
+    image: traefik:v2.11
     container_name: selling-point-reverse-proxy
     restart: always
     ports:
@@ -67,8 +67,11 @@ services:
     image: selling-point-api
     container_name: selling-point-api
     restart: always
-    build: 
+    build:
       context: ./selling-point-api
+    depends_on:
+      mysql:
+        condition: service_healthy
     labels:
       # Tells Traefik where to redirect the request if the url has the specified prefix
       - traefik.http.routers.api.rule=PathPrefix(`/api`)
@@ -90,14 +93,17 @@ services:
       - selling-point
     environment:
       WAIT_HOSTS: mysql:3306
-      DATABASE_URL: mysql://root:huachinango@mysql:3306/selling_point
+      DATABASE_URL: mysql://root:huachinango@172.20.0.10:3306/selling_point
       NODE_ENV: development
   auth:
     image: selling-point-auth
     container_name: selling-point-auth
     restart: always
-    build: 
+    build:
       context: ./selling-point-auth
+    depends_on:
+      mysql:
+        condition: service_healthy
     labels:
       # Tells Traefik where to redirect the request if the url has the specified prefix
       - traefik.http.routers.auth.rule=PathPrefix(`/auth`)
@@ -116,7 +122,7 @@ services:
     environment:
       WAIT_HOSTS: mysql:3306
       IGNORE_ENV_FILE: 'true'
-      DATABASE_URL: mysql://root:huachinango@mysql:3306/selling_point
+      DATABASE_URL: mysql://root:huachinango@172.20.0.10:3306/selling_point
       PASSWORD_SALT: $$2b$$10$$g0OI8KtIE3j6OQqt1ZUDte
       NODE_ENV: development
     volumes:
@@ -147,10 +153,16 @@ services:
     ports:
       - 3306:3306
     networks:
-      - selling-point
+      selling-point:
+        ipv4_address: 172.20.0.10
     volumes:
       - mysql-db:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-phuachinango"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
   jaeger:
     image: jaegertracing/all-in-one:1.29
     container_name: selling-point-tracing
@@ -161,7 +173,6 @@ services:
       - 16686:16686
     networks:
       - selling-point
-
   ngrok:
     image: ngrok/ngrok:3
     container_name: selling-point-ngrok
@@ -183,3 +194,6 @@ networks:
   selling-point:
     name: selling-point
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
