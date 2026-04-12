@@ -1,0 +1,247 @@
+name: Implement Changes
+
+on:
+  repository_dispatch:
+    types: [notion-implement]
+
+jobs:
+  # ── Fetch the approved plan from Notion ──────────────────────────────────────
+  fetch-plan:
+    name: Fetch Plan
+    runs-on: ubuntu-latest
+    outputs:
+      affects_auth: ${{ steps.fetch.outputs.affects_auth }}
+      affects_api: ${{ steps.fetch.outputs.affects_api }}
+      affects_frontend: ${{ steps.fetch.outputs.affects_frontend }}
+
+    steps:
+      - name: Checkout CI scripts
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: ci
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Notion SDK
+        run: npm install @notionhq/client
+        working-directory: ci
+
+      - name: Fetch plan from Notion
+        id: fetch
+        env:
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_PAGE_ID: ${{ github.event.client_payload.page_id }}
+          PLAN_JSON_OUTPUT: ${{ github.workspace }}/plan.json
+        run: node ci/scripts/fetch-plan.js
+
+      - name: Upload plan for impl jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: plan-impl-${{ github.event.client_payload.page_id }}
+          path: plan.json
+          retention-days: 1
+
+  # ── Auth service ─────────────────────────────────────────────────────────────
+  agent-auth:
+    name: Implement — Auth
+    needs: fetch-plan
+    if: needs.fetch-plan.outputs.affects_auth == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      branch_name: ${{ steps.impl.outputs.branch_name }}
+      pr_url: ${{ steps.impl.outputs.pr_url }}
+
+    steps:
+      - name: Checkout CI scripts
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: ci
+
+      - name: Checkout selling-point-auth
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/selling-point-auth
+          token: ${{ secrets.GH_TOKEN }}
+          path: repo
+          submodules: recursive
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: ci/package-lock.json
+
+      - name: Install CI dependencies
+        run: npm ci
+        working-directory: ci
+
+      - name: Install service dependencies
+        run: npm ci
+        working-directory: repo
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: plan-impl-${{ github.event.client_payload.page_id }}
+
+      - name: Run implementation agent
+        id: impl
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          SERVICE: auth
+          NOTION_PAGE_ID: ${{ github.event.client_payload.page_id }}
+          PLAN_JSON_PATH: ${{ github.workspace }}/plan.json
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          DRY_RUN: ${{ vars.DRY_RUN || 'false' }}
+        run: npx ts-node agents/implementation-agent.ts
+        working-directory: ci
+
+  # ── API service ──────────────────────────────────────────────────────────────
+  agent-api:
+    name: Implement — API
+    needs: fetch-plan
+    if: needs.fetch-plan.outputs.affects_api == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      branch_name: ${{ steps.impl.outputs.branch_name }}
+      pr_url: ${{ steps.impl.outputs.pr_url }}
+
+    steps:
+      - name: Checkout CI scripts
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: ci
+
+      - name: Checkout selling-point-api
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/selling-point-api
+          token: ${{ secrets.GH_TOKEN }}
+          path: repo
+          submodules: recursive
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: ci/package-lock.json
+
+      - name: Install CI dependencies
+        run: npm ci
+        working-directory: ci
+
+      - name: Install service dependencies
+        run: npm ci
+        working-directory: repo
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: plan-impl-${{ github.event.client_payload.page_id }}
+
+      - name: Run implementation agent
+        id: impl
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          SERVICE: api
+          NOTION_PAGE_ID: ${{ github.event.client_payload.page_id }}
+          PLAN_JSON_PATH: ${{ github.workspace }}/plan.json
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          DRY_RUN: ${{ vars.DRY_RUN || 'false' }}
+        run: npx ts-node agents/implementation-agent.ts
+        working-directory: ci
+
+  # ── Frontend ─────────────────────────────────────────────────────────────────
+  agent-frontend:
+    name: Implement — Frontend
+    needs: fetch-plan
+    if: needs.fetch-plan.outputs.affects_frontend == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      branch_name: ${{ steps.impl.outputs.branch_name }}
+      pr_url: ${{ steps.impl.outputs.pr_url }}
+
+    steps:
+      - name: Checkout CI scripts
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: ci
+
+      - name: Checkout selling-point-admin-dashboard
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/selling-point-admin-dashboard
+          token: ${{ secrets.GH_TOKEN }}
+          path: repo
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: ci/package-lock.json
+
+      - name: Install CI dependencies
+        run: npm ci
+        working-directory: ci
+
+      - name: Install service dependencies
+        run: npm ci
+        working-directory: repo
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: plan-impl-${{ github.event.client_payload.page_id }}
+
+      - name: Run implementation agent
+        id: impl
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          SERVICE: frontend
+          NOTION_PAGE_ID: ${{ github.event.client_payload.page_id }}
+          PLAN_JSON_PATH: ${{ github.workspace }}/plan.json
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          DRY_RUN: ${{ vars.DRY_RUN || 'false' }}
+        run: npx ts-node agents/implementation-agent.ts
+        working-directory: ci
+
+  # ── Bump submodule pointers in orchestrator repo ─────────────────────────────
+  bump-submodules:
+    name: Bump Submodule Pointers
+    needs: [agent-auth, agent-api, agent-frontend]
+    # Run as long as at least one impl job succeeded (others may be skipped)
+    if: |
+      always() &&
+      !cancelled() &&
+      (
+        needs.agent-auth.result == 'success' ||
+        needs.agent-api.result == 'success' ||
+        needs.agent-frontend.result == 'success'
+      )
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout orchestrator with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Bump submodules and open PR
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          NOTION_PAGE_ID: ${{ github.event.client_payload.page_id }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          AUTH_BRANCH: ${{ needs.agent-auth.outputs.branch_name }}
+          API_BRANCH: ${{ needs.agent-api.outputs.branch_name }}
+          FRONTEND_BRANCH: ${{ needs.agent-frontend.outputs.branch_name }}
+        run: bash ci/scripts/bump-submodules.sh

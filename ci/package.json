@@ -1,0 +1,21 @@
+{
+  "name": "selling-point-ci-agents",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "plan": "ts-node agents/plan-agent.ts",
+    "implement": "ts-node agents/implementation-agent.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "@notionhq/client": "^2.2.15",
+    "@octokit/rest": "^21.0.0",
+    "simple-git": "^3.27.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.5.0"
+  }
+}
