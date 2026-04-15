@@ -491,10 +491,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  // Notion SDK errors have a `body` field with the API response — surface it explicitly
-  if (err?.body) {
-    console.error("Notion API error:", JSON.stringify(err.body, null, 2));
-  }
-  console.error(err?.message ?? err);
+  console.error(err);
   process.exit(1);
 });
