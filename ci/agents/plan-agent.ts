@@ -69,7 +69,9 @@ async function fetchPageContext(notion: NotionClient, pageId: string) {
 
   for (const block of blocks.results as any[]) {
     if (block.type === "code") {
-      const text: string = block.code?.rich_text?.[0]?.plain_text ?? "";
+      const text: string = (block.code?.rich_text ?? [])
+        .map((rt: any) => rt.plain_text ?? "")
+        .join("");
       if (text.includes(PLAN_MARKER)) {
         existingPlanJson = text.replace(PLAN_MARKER, "").trim();
         existingPlanBlockId = block.id as string;
@@ -93,6 +95,17 @@ async function fetchPageContext(notion: NotionClient, pageId: string) {
   };
 }
 
+// Notion's rich_text objects have a 2000-character limit each.
+// Split the content into chunks and map each to a rich_text entry.
+function toRichTextChunks(content: string) {
+  const CHUNK = 2000;
+  const chunks: string[] = [];
+  for (let i = 0; i < content.length; i += CHUNK) {
+    chunks.push(content.slice(i, i + CHUNK));
+  }
+  return chunks.map((c) => ({ type: "text", text: { content: c } }));
+}
+
 async function upsertPlanBlock(
   notion: NotionClient,
   pageId: string,
@@ -100,13 +113,12 @@ async function upsertPlanBlock(
   existingBlockId: string | null,
 ) {
   const content = `${PLAN_MARKER}\n${planJson}`;
+  const richText = toRichTextChunks(content);
+
   if (existingBlockId) {
     await (notion.blocks as any).update({
       block_id: existingBlockId,
-      code: {
-        rich_text: [{ type: "text", text: { content } }],
-        language: "json",
-      },
+      code: { rich_text: richText, language: "json" },
     });
   } else {
     await notion.blocks.children.append({
@@ -115,10 +127,7 @@ async function upsertPlanBlock(
         {
           object: "block",
           type: "code",
-          code: {
-            rich_text: [{ type: "text", text: { content } }],
-            language: "json",
-          },
+          code: { rich_text: richText, language: "json" },
         },
       ] as any,
     });
@@ -482,6 +491,10 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err);
+  // Notion SDK errors have a `body` field with the API response — surface it explicitly
+  if (err?.body) {
+    console.error("Notion API error:", JSON.stringify(err.body, null, 2));
+  }
+  console.error(err?.message ?? err);
   process.exit(1);
 });
