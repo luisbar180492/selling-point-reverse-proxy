@@ -68,8 +68,8 @@ async function fetchPageContext(notion: NotionClient, pageId: string) {
   let existingPlanBlockId: string | null = null;
 
   for (const block of blocks.results as any[]) {
-    if (block.type === "code") {
-      const text: string = (block.code?.rich_text ?? [])
+    if (block.type === "paragraph") {
+      const text: string = (block.paragraph?.rich_text ?? [])
         .map((rt: any) => rt.plain_text ?? "")
         .join("");
       if (text.includes(PLAN_MARKER)) {
@@ -118,7 +118,7 @@ async function upsertPlanBlock(
   if (existingBlockId) {
     await (notion.blocks as any).update({
       block_id: existingBlockId,
-      code: { rich_text: richText, language: "json" },
+      paragraph: { rich_text: richText },
     });
   } else {
     await notion.blocks.children.append({
@@ -126,8 +126,8 @@ async function upsertPlanBlock(
       children: [
         {
           object: "block",
-          type: "code",
-          code: { rich_text: richText, language: "json" },
+          type: "paragraph",
+          paragraph: { rich_text: richText },
         },
       ] as any,
     });
