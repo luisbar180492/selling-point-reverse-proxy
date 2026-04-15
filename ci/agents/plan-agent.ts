@@ -41,6 +41,8 @@ type Plan = z.infer<typeof PlanSchema>;
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const PLAN_MARKER = "<!-- AGENT_PLAN_JSON -->";
+const PLAN_MARKER_CONT = "<!-- AGENT_PLAN_JSON_CONT -->";
+const CHUNK_SIZE = 1900; // leaves room for marker prefix within Notion's 2000-char limit
 const REPO_ROOT = process.env.REPO_ROOT ?? process.cwd();
 const MAX_FILE_CHARS = 50_000;
 const SKIP_DIRS = new Set([
@@ -62,21 +64,27 @@ async function fetchPageContext(notion: NotionClient, pageId: string) {
   const description =
     page.properties?.Description?.rich_text?.[0]?.plain_text ?? "";
 
-  // Scan page blocks for an existing plan code block
+  // Scan page blocks for existing plan paragraph(s).
+  // The plan is split across 1..N blocks: first has PLAN_MARKER prefix,
+  // continuations have PLAN_MARKER_CONT prefix.
   const blocks = await notion.blocks.children.list({ block_id: pageId });
   let existingPlanJson: string | null = null;
-  let existingPlanBlockId: string | null = null;
+  const existingPlanBlockIds: string[] = [];
 
   for (const block of blocks.results as any[]) {
-    if (block.type === "paragraph") {
-      const text: string = (block.paragraph?.rich_text ?? [])
-        .map((rt: any) => rt.plain_text ?? "")
-        .join("");
-      if (text.includes(PLAN_MARKER)) {
-        existingPlanJson = text.replace(PLAN_MARKER, "").trim();
-        existingPlanBlockId = block.id as string;
-        break;
-      }
+    if (block.type !== "paragraph") continue;
+    const text: string = (block.paragraph?.rich_text ?? [])
+      .map((rt: any) => rt.plain_text ?? "")
+      .join("");
+    if (text.startsWith(PLAN_MARKER)) {
+      existingPlanBlockIds.push(block.id as string);
+      existingPlanJson = text.slice(PLAN_MARKER.length).trimStart();
+    } else if (
+      text.startsWith(PLAN_MARKER_CONT) &&
+      existingPlanBlockIds.length > 0
+    ) {
+      existingPlanBlockIds.push(block.id as string);
+      existingPlanJson += text.slice(PLAN_MARKER_CONT.length);
     }
   }
 
@@ -90,44 +98,38 @@ async function fetchPageContext(notion: NotionClient, pageId: string) {
     title,
     description,
     existingPlanJson,
-    existingPlanBlockId,
+    existingPlanBlockIds,
     commentTexts,
   };
-}
-
-// Notion's rich_text objects have a 2000-character limit each.
-// Split the content into chunks and map each to a rich_text entry.
-function toRichTextChunks(content: string) {
-  const CHUNK = 2000;
-  const chunks: string[] = [];
-  for (let i = 0; i < content.length; i += CHUNK) {
-    chunks.push(content.slice(i, i + CHUNK));
-  }
-  return chunks.map((c) => ({ type: "text", text: { content: c } }));
 }
 
 async function upsertPlanBlock(
   notion: NotionClient,
   pageId: string,
   planJson: string,
-  existingBlockId: string | null,
+  existingBlockIds: string[],
 ) {
-  const content = `${PLAN_MARKER}\n${planJson}`;
-  const richText = toRichTextChunks(content);
+  // Delete all existing plan blocks (may be 0..N)
+  for (const blockId of existingBlockIds) {
+    await notion.blocks.delete({ block_id: blockId });
+  }
 
-  if (existingBlockId) {
-    await (notion.blocks as any).update({
-      block_id: existingBlockId,
-      paragraph: { rich_text: richText },
-    });
-  } else {
+  // Split planJson into CHUNK_SIZE pieces and append one paragraph per chunk.
+  // First block gets PLAN_MARKER prefix; subsequent blocks get PLAN_MARKER_CONT.
+  for (let i = 0; i < planJson.length; i += CHUNK_SIZE) {
+    const chunk = planJson.slice(i, i + CHUNK_SIZE);
+    const prefix = i === 0 ? `${PLAN_MARKER}\n` : PLAN_MARKER_CONT;
     await notion.blocks.children.append({
       block_id: pageId,
       children: [
         {
           object: "block",
           type: "paragraph",
-          paragraph: { rich_text: richText },
+          paragraph: {
+            rich_text: [
+              { type: "text", text: { content: `${prefix}${chunk}` } },
+            ],
+          },
         },
       ] as any,
     });
@@ -457,7 +459,7 @@ async function main() {
     title,
     description,
     existingPlanJson,
-    existingPlanBlockId,
+    existingPlanBlockIds,
     commentTexts,
   } = await fetchPageContext(notion, pageId);
 
@@ -479,7 +481,7 @@ async function main() {
   console.log(planJson);
 
   console.log("\nPosting plan to Notion...");
-  await upsertPlanBlock(notion, pageId, planJson, existingPlanBlockId);
+  await upsertPlanBlock(notion, pageId, planJson, existingPlanBlockIds);
 
   const waitingStatus = process.env.NOTION_WAITING_VALUE ?? "Waiting Approval";
   console.log(`Updating status to "${waitingStatus}"...`);
